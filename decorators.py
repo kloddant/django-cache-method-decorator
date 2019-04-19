@@ -1,22 +1,28 @@
 from django.core.cache import cache
 from hashlib import md5
+from functools import wraps
 
-def cache_method(method, timeout=3600):
+def cache_method(timeout=3600):
 
-	def wrapper(*args, **kwargs):
-		
-		key = md5(repr(method).encode('utf-8'))
-		for arg in args:
-			key.update(repr(arg).encode('utf-8'))
-		for kwarg_key, kwarg_value in kwargs.items():
-			key.update(repr(kwarg_key).encode('utf-8'))
-			key.update(repr(kwarg_value).encode('utf-8'))
-		key = key.hexdigest()
-		result = cache.get(key)
-		if not result:
-			result = method(*args, **kwargs)
-			cache.set(key, result, timeout)
+	def outer_wrapper(view_func):
 
-		return result
+		@wraps(view_func)
+		def inner_wrapper(*args, **kwargs):
+			
+			key = md5(repr(view_func).encode('utf-8'))
+			for arg in args:
+				key.update(repr(arg).encode('utf-8'))
+			for kwarg_key, kwarg_value in kwargs.items():
+				key.update(repr(kwarg_key).encode('utf-8'))
+				key.update(repr(kwarg_value).encode('utf-8'))
+			key = key.hexdigest()
+			result = cache.get(key)
+			if not result:
+				result = view_func(*args, **kwargs)
+				cache.set(key, result, timeout)
 
-	return wrapper
+			return result
+
+		return inner_wrapper
+
+	return outer_wrapper
