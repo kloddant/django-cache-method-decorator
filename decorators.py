@@ -1,6 +1,7 @@
 from django.core.cache import cache
 from hashlib import md5
 from functools import wraps
+import psutil
 
 def cache_method(timeout=300):
 
@@ -21,7 +22,9 @@ def cache_method(timeout=300):
 			result = cache.get(key)
 			if not result:
 				result = view_func(*args, **kwargs)
-				cache.set(key, result, timeout)
+				percent_memory_usage = psutil.virtual_memory()[2]
+				if percent_memory_usage < 90:
+					cache.set(key, result, timeout)
 
 			return result
 
